@@ -174,6 +174,14 @@ either you or they can follow these steps:
 1. Set the environment variable `AZURE_PRINCIPAL_ID` either in that `.env` file or in the active shell to their Azure ID, which they can get with `az ad signed-in-user show`.
 1. Run `./scripts/roles.ps1` or `.scripts/roles.sh` to assign all of the necessary roles to the user.  If they do not have the necessary permission to create roles in the subscription, then you may need to run this script for them. Once the script runs, they should be able to run the app locally.
 
+
+## Running the data preparation script
+- The data preparation script `prepdocs.py` is used to upload the sample documents to Azure Blob Storage and then index them in Azure Cognitive Search.
+- The script requires the Azure Blob Storage connection string and the Azure Cognitive Search admin key.
+- The script also requires the Azure Cognitive Search service name and the index name.
+- The script can be run using the following command:
+    
+
 ## Running locally
 
 You can only run locally **after** having successfully run the `azd up` command. If you haven't yet, follow the steps in [Azure deployment](#azure-deployment) above.
