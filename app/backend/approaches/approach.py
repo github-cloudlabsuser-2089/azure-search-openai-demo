@@ -28,6 +28,7 @@ from core.authentication import AuthenticationHelper
 from text import nonewlines
 
 
+# Document dataclass represents a document retrieved from the search index or processed for embedding.
 @dataclass
 class Document:
     id: Optional[str]
@@ -44,6 +45,7 @@ class Document:
     reranker_score: Optional[float] = None
 
     def serialize_for_results(self) -> dict[str, Any]:
+        # Serializes the document for API results, trimming embeddings for readability.
         return {
             "id": self.id,
             "content": self.content,
@@ -72,7 +74,7 @@ class Document:
 
     @classmethod
     def trim_embedding(cls, embedding: Optional[List[float]]) -> Optional[str]:
-        """Returns a trimmed list of floats from the vector embedding."""
+        """Returns a trimmed list of floats from the vector embedding for display/logging purposes."""
         if embedding:
             if len(embedding) > 2:
                 # Format the embedding list to show the first 2 items followed by the count of the remaining items."""
@@ -83,6 +85,7 @@ class Document:
         return None
 
 
+# ThoughtStep dataclass represents a step in the reasoning or thought process for tracing/debugging.
 @dataclass
 class ThoughtStep:
     title: str
@@ -90,6 +93,7 @@ class ThoughtStep:
     props: Optional[dict[str, Any]] = None
 
 
+# Abstract base class for all retrieval/augmentation approaches (RAG, chat, vision, etc.)
 class Approach(ABC):
     def __init__(
         self,
@@ -105,6 +109,7 @@ class Approach(ABC):
         vision_endpoint: str,
         vision_token_provider: Callable[[], Awaitable[str]],
     ):
+        # Store all dependencies and configuration for the approach
         self.search_client = search_client
         self.openai_client = openai_client
         self.auth_helper = auth_helper
@@ -118,6 +123,7 @@ class Approach(ABC):
         self.vision_token_provider = vision_token_provider
 
     def build_filter(self, overrides: dict[str, Any], auth_claims: dict[str, Any]) -> Optional[str]:
+        # Builds a filter string for Azure Search queries, including security and category filters.
         exclude_category = overrides.get("exclude_category")
         security_filter = self.auth_helper.build_security_filters(overrides, auth_claims)
         filters = []
@@ -140,6 +146,8 @@ class Approach(ABC):
         minimum_search_score: Optional[float],
         minimum_reranker_score: Optional[float],
     ) -> List[Document]:
+        # Performs a search using Azure Cognitive Search, supporting text, vector, and semantic search.
+        # Filters and scores results, returning qualified Document objects.
         search_text = query_text if use_text_search else ""
         search_vectors = vectors if use_vector_search else []
         if use_semantic_ranker:
@@ -197,6 +205,7 @@ class Approach(ABC):
     def get_sources_content(
         self, results: List[Document], use_semantic_captions: bool, use_image_citation: bool
     ) -> list[str]:
+        # Extracts and formats the content/captions from search results for use in prompts or responses.
         if use_semantic_captions:
             return [
                 (self.get_citation((doc.sourcepage or ""), use_image_citation))
@@ -211,6 +220,7 @@ class Approach(ABC):
             ]
 
     def get_citation(self, sourcepage: str, use_image_citation: bool) -> str:
+        # Returns a formatted citation string for a document source, handling image and PDF sources.
         if use_image_citation:
             return sourcepage
         else:
@@ -223,6 +233,7 @@ class Approach(ABC):
             return sourcepage
 
     async def compute_text_embedding(self, q: str):
+        # Computes a text embedding for the query using the OpenAI API, supporting multiple models/dimensions.
         SUPPORTED_DIMENSIONS_MODEL = {
             "text-embedding-ada-002": False,
             "text-embedding-3-small": True,
@@ -245,6 +256,7 @@ class Approach(ABC):
         return VectorizedQuery(vector=query_vector, k_nearest_neighbors=50, fields="embedding")
 
     async def compute_image_embedding(self, q: str):
+        # Computes an image embedding for the query using the Azure Vision endpoint.
         endpoint = urljoin(self.vision_endpoint, "computervision/retrieval:vectorizeText")
         headers = {"Content-Type": "application/json"}
         params = {"api-version": "2023-02-01-preview", "modelVersion": "latest"}
@@ -266,6 +278,7 @@ class Approach(ABC):
         session_state: Any = None,
         context: dict[str, Any] = {},
     ) -> dict[str, Any]:
+        # Abstract method: runs the approach for a given chat session/messages. Must be implemented by subclasses.
         raise NotImplementedError
 
     async def run_stream(
@@ -274,4 +287,5 @@ class Approach(ABC):
         session_state: Any = None,
         context: dict[str, Any] = {},
     ) -> AsyncGenerator[dict[str, Any], None]:
+        # Abstract method: runs the approach in streaming mode. Must be implemented by subclasses.
         raise NotImplementedError
